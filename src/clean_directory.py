@@ -1,6 +1,8 @@
 import json
 import shutil
+import sys
 from pathlib import Path
+from typing import Union
 
 from loguru import logger
 
@@ -12,24 +14,26 @@ class OrganizeFiles:
     This class is used to organize files in a directory by
     moving files into sub-directories based on extention.
     """
-    def __init__(self, directory):
-        self.directory = Path(directory)
-        if not self.directory.exists():
-            raise FileNotFoundError(f'{self.directory} does not exist')
-        with open(DATA_DIR / 'extentions.json') as f:
+    def __init__(self):
+        with open(DATA_DIR / 'extentions.txt') as f:
             ext_dirs = json.load(f)
         self.extentions_dest = {}
         for dir_name, ext_list in ext_dirs.items():
             for ext in ext_list:
                 self.extentions_dest[ext] = dir_name
 
-    def __call__(self):
+    def __call__(self, directory: Union[str, Path]):
         """Organize files in a directry by moving them
         to sub directories based on extention.
+        :param directory: path of directory to get organized
         """
-        logger.info(f'Organizing files in {self.directory}...')
+        directory = Path(directory)
+        if not directory.exists():
+            raise FileNotFoundError(f'{directory} does not exist')
+        logger.info(f'Organizing files in {directory}...')
         file_extentions = []
-        for file_path in self.directory.iterdir():
+        self.file_counter = 0
+        for file_path in directory.iterdir():
             # ignore directories
             if file_path.is_dir():
                 continue
@@ -41,16 +45,17 @@ class OrganizeFiles:
             # move files
             file_extentions.append(file_path.suffix)
             if file_path.suffix not in self.extentions_dest:
-                DEST_DIR = self.directory / 'other'
+                DEST_DIR = directory / 'other'
             else:
-                DEST_DIR = self.directory / self.extentions_dest[file_path.suffix]
-
+                DEST_DIR = directory / self.extentions_dest[file_path.suffix]
+            self.file_counter += 1
             DEST_DIR.mkdir(exist_ok=True)
             logger.info(f'moving {file_path} to {DEST_DIR}...')
             shutil.move(str(file_path), str(DEST_DIR))
 
 
 if __name__ == '__main__':
-    org_files = OrganizeFiles('/mnt/c/Users/VAIO/Desktop/Python Learning/Hejazi/1-Python/0-My_Python_Practice/4-Project Clean Directory/Clean_Directory/test/kk')
-    org_files()
+    org_files = OrganizeFiles()
+    org_files(sys.argv[1])
+    logger.info(f'{org_files.file_counter} Files Got Organized!')
     print('***************Done***************')
